@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dawn Bot</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#0a0a0f; --card:#13131a; --border:#1e1e2e;
+  --accent:#7c3aed; --accent2:#06b6d4; --green:#10b981;
+  --red:#ef4444; --yellow:#f59e0b; --text:#f1f5f9; --muted:#64748b;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+
+/* HEADER */
+.header { background:linear-gradient(135deg,#1a0533,#0a0a1a); padding:16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+.logo { width:42px; height:42px; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.header-info h1 { font-size:17px; font-weight:700; }
+.header-info p { font-size:11px; color:var(--muted); margin-top:1px; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); margin-left:auto; box-shadow:0 0 8px var(--green); animation:pulse 2s infinite; flex-shrink:0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* TABS */
+.tabs { display:flex; background:var(--card); border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { flex:1; min-width:60px; padding:10px 4px; text-align:center; font-size:10px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
+.tab.active { color:var(--accent2); border-bottom-color:var(--accent2); }
+.tab span { display:block; font-size:17px; margin-bottom:2px; }
+
+/* PAGES */
+.page { display:none; padding:14px; }
+.page.active { display:block; }
+
+/* CARD */
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px; margin-bottom:12px; }
+.card-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+
+/* INPUTS */
+.input-group { margin-bottom:12px; }
+.input-group label { font-size:12px; color:var(--muted); margin-bottom:5px; display:block; }
+input,textarea,select { width:100%; background:#0f0f1a; border:1px solid var(--border); border-radius:10px; padding:11px 12px; color:var(--text); font-size:14px; outline:none; transition:border 0.2s; font-family:inherit; }
+input:focus,textarea:focus,select:focus { border-color:var(--accent); }
+textarea { resize:none; }
+select option { background:#1a1a2e; }
+
+/* BUTTONS */
+.btn { width:100%; padding:13px; border-radius:12px; border:none; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn:active { transform:scale(0.97); opacity:0.9; }
+.btn-primary { background:linear-gradient(135deg,var(--accent),#9333ea); color:white; }
+.btn-secondary { background:linear-gradient(135deg,var(--accent2),#0284c7); color:white; }
+.btn-success { background:linear-gradient(135deg,var(--green),#059669); color:white; }
+.btn-danger { background:linear-gradient(135deg,var(--red),#dc2626); color:white; }
+.btn-outline { background:transparent; border:1px solid var(--border); color:var(--text); }
+.btn-sm { padding:9px 14px; font-size:12px; border-radius:9px; width:auto; }
+.btn:disabled { opacity:0.5; cursor:not-allowed; }
+.btn-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.btn-row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px; }
+
+/* TOGGLE */
+.toggle-group { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+.tgl { flex:1; min-width:80px; padding:10px 6px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:12px; cursor:pointer; transition:all 0.2s; text-align:center; }
+.tgl.active { background:var(--accent); border-color:var(--accent); color:white; font-weight:600; }
+
+/* STATS */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; text-align:center; }
+.stat-value { font-size:28px; font-weight:700; }
+.stat-label { font-size:11px; color:var(--muted); margin-top:4px; }
+
+/* BADGE */
+.badge { display:inline-block; padding:3px 8px; border-radius:100px; font-size:11px; font-weight:600; }
+.badge-green { background:rgba(16,185,129,0.15); color:var(--green); }
+.badge-yellow { background:rgba(245,158,11,0.15); color:var(--yellow); }
+.badge-red { background:rgba(239,68,68,0.15); color:var(--red); }
+.badge-blue { background:rgba(6,182,212,0.15); color:var(--accent2); }
+.badge-purple { background:rgba(124,58,237,0.15); color:var(--accent); }
+
+/* LIST */
+.list-item { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+.list-item:last-child { border-bottom:none; }
+.list-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.list-info { flex:1; min-width:0; }
+.list-info h4 { font-size:14px; font-weight:600; }
+.list-info p { font-size:12px; color:var(--muted); margin-top:2px; }
+
+/* ALERT */
+.alert { border-radius:12px; padding:11px 13px; font-size:12px; margin-bottom:12px; display:flex; align-items:flex-start; gap:8px; line-height:1.5; }
+.alert-info { background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.2); color:var(--accent2); }
+.alert-success { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.2); color:var(--green); }
+.alert-warning { background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); color:var(--yellow); }
+.alert-error { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); color:var(--red); }
+
+/* PROGRESS */
+.prog-bar { background:var(--border); border-radius:100px; height:6px; overflow:hidden; margin:8px 0; }
+.prog-fill { height:100%; border-radius:100px; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width 0.5s; }
+
+/* SPINNER */
+.spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,0.2); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; display:inline-block; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* TOAST */
+.toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:#1e1e2e; border:1px solid var(--border); border-radius:12px; padding:11px 18px; font-size:13px; z-index:9999; white-space:nowrap; box-shadow:0 8px 32px rgba(0,0,0,0.6); animation:slideUp 0.3s ease; }
+@keyframes slideUp { from{bottom:70px;opacity:0} to{bottom:90px;opacity:1} }
+
+/* MISC */
+.row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.row:last-child{margin-bottom:0}
+.row-label{font-size:13px;color:var(--muted);}
+.row-value{font-size:13px;font-weight:500;}
+.divider{height:1px;background:var(--border);margin:12px 0;}
+.gradient-text{background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.section-title{font-size:16px;font-weight:700;margin-bottom:12px;}
+.bottom-space{height:24px;}
+.confirm-box{background:#0f0f1a;border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;}
+.confirm-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.confirm-row:last-child{border-bottom:none;}
+.confirm-label{color:var(--muted);}
+.confirm-value{font-weight:500;text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;}
+
+/* STEP INDICATOR */
+.steps{display:flex;align-items:center;margin-bottom:16px;}
+.step{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.step.done{background:var(--green);color:white;}
+.step.active{background:var(--accent);color:white;}
+.step.inactive{background:var(--border);color:var(--muted);}
+.step-line{flex:1;height:2px;background:var(--border);margin:0 4px;}
+.step-line.done{background:var(--green);}
+
+/* USER CARD */
+.user-card{display:flex;align-items:center;gap:10px;padding:10px;background:#0f0f1a;border-radius:12px;margin-bottom:8px;}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-info h4{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-info p{font-size:11px;color:var(--muted);margin-top:1px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">🤖</div>
+  <div class="header-info">
+    <h1>Dawn Bot</h1>
+    <p id="hdr-user">Connecting...</p>
+  </div>
+  <div class="status-dot"></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('home')"><span>🏠</span>Home</div>
+  <div class="tab" onclick="showTab('download')"><span>⬇️</span>Download</div>
+  <div class="tab" onclick="showTab('post')"><span>📤</span>Post</div>
+  <div class="tab" onclick="showTab('ai')"><span>🤖</span>AI</div>
+  <div class="tab" onclick="showTab('admin')"><span>🔐</span>Admin</div>
+  <div class="tab" onclick="showTab('settings')"><span>⚙️</span>Settings</div>
+</div>
+
+<!-- ████████████ HOME ████████████ -->
+<div class="page active" id="page-home">
+  <div class="user-card" id="home-user-card">
+    <div class="user-avatar" id="home-avatar">?</div>
+    <div class="user-info">
+      <h4 id="home-name">Loading...</h4>
+      <p id="home-status">Checking access...</p>
+    </div>
+    <span class="badge badge-green" id="home-badge">✅</span>
+  </div>
+
+  <div class="btn-row" style="margin-bottom:12px">
+    <button class="btn btn-primary" onclick="showTab('download')">⬇️ Download</button>
+    <button class="btn btn-secondary" onclick="showTab('post')">📤 Post Video</button>
+  </div>
+  <div class="btn-row" style="margin-bottom:12px">
+    <button class="btn btn-outline" onclick="showTab('ai')">🤖 AI Caption</button>
+    <button class="btn btn-outline" onclick="showTab('admin')">🔐 Admin</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✅ Bot Features</div>
+    <div class="row"><span class="row-label">⬇️ Download Videos</span><span class="badge badge-green">Active</span></div>
+    <div class="row"><span class="row-label">🖊 Watermark</span><span class="badge badge-green">Active</span></div>
+    <div class="row"><span class="row-label">🤖 AI Captions</span><span class="badge badge-green">Active</span></div>
+    <div class="row"><span class="row-label">📢 Post to Telegram</span><span class="badge badge-green">Active</span></div>
+    <div class="row"><span class="row-label">🎵 Post to TikTok</span><span class="badge badge-yellow">In Review</span></div>
+    <div class="row"><span class="row-label">🔐 Access Control</span><span class="badge badge-green">Active</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📥 Supported Sources</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <span class="badge badge-blue">🎵 TikTok</span>
+      <span class="badge badge-blue">📸 Instagram</span>
+      <span class="badge badge-blue">▶️ YouTube</span>
+      <span class="badge badge-blue">🐦 Twitter/X</span>
+      <span class="badge badge-blue">📘 Facebook</span>
+      <span class="badge badge-blue">📢 Telegram</span>
+    </div>
+  </div>
+  <div class="bottom-space"></div>
+</div>
+
+<!-- ████████████ DOWNLOAD ████████████ -->
+<div class="page" id="page-download">
+  <div class="card">
+    <div class="card-title">⬇️ Download Video</div>
+    <div class="input-group">
+      <label>Video URL</label>
+      <input type="url" id="dl-url" placeholder="https://tiktok.com/... or any supported link">
+    </div>
+    <div class="card-title">🖊 Watermark</div>
+    <div class="toggle-group">
+      <button class="tgl active" id="dl-wm-on"  onclick="dlSetWm('on')">✅ With Watermark</button>
+      <button class="tgl"        id="dl-wm-off" onclick="dlSetWm('off')">❌ No Watermark</button>
+    </div>
+    <div class="card-title">📍 Post Destination</div>
+    <div class="toggle-group">
+      <button class="tgl active" id="dl-dest-tg"   onclick="dlSetDest('telegram')">📢 Telegram</button>
+      <button class="tgl"        id="dl-dest-tt"   onclick="dlSetDest('tiktok')">🎵 TikTok</button>
+      <button class="tgl"        id="dl-dest-both" onclick="dlSetDest('both')">📢+🎵 Both</button>
+    </div>
+    <div id="dl-privacy-section" style="display:none">
+      <div class="card-title">🔒 TikTok Privacy</div>
+      <div class="toggle-group">
+        <button class="tgl" id="dl-priv-pub"     onclick="dlSetPriv('PUBLIC_TO_EVERYONE')">🌍 Public</button>
+        <button class="tgl" id="dl-priv-friends" onclick="dlSetPriv('FRIEND_ONLY')">👥 Friends</button>
+        <button class="tgl active" id="dl-priv-priv" onclick="dlSetPriv('SELF_ONLY')">🔒 Private</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✨ Caption & Hashtags</div>
+    <div class="toggle-group">
+      <button class="tgl active" id="cap-ai"     onclick="setCaptionMode('ai')">🤖 AI Generate</button>
+      <button class="tgl"        id="cap-manual" onclick="setCaptionMode('manual')">✏️ Write Own</button>
+      <button class="tgl"        id="cap-skip"   onclick="setCaptionMode('skip')">⏭ Skip</button>
+    </div>
+    <div id="ai-topic-section">
+      <div class="input-group">
+        <label>Video topic (for AI)</label>
+        <input type="text" id="dl-topic" placeholder="e.g. Forex trading, Ethiopian music...">
+      </div>
+    </div>
+    <div id="manual-caption-section" style="display:none">
+      <div class="input-group">
+        <label>Caption</label>
+        <textarea id="dl-caption" placeholder="Your caption..." style="height:70px"></textarea>
+      </div>
+      <div class="input-group">
+        <label>Hashtags</label>
+        <input type="text" id="dl-hashtags" placeholder="#tag1 #tag2 #tag3">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="dl-btn" onclick="sendDownload()" style="margin-bottom:12px">
+    ⬇️ Download & Post
+  </button>
+  <div class="alert alert-info">ℹ️ This sends the request to Dawn Bot to process.</div>
+  <div class="bottom-space"></div>
+</div>
+
+<!-- ████████████ POST (Video File) ████████████ -->
+<div class="page" id="page-post">
+  <div class="alert alert-info">📹 Send a video file directly to the bot chat, then use this screen to configure posting options.</div>
+
+  <div class="card">
+    <div class="card-title">📍 Post Destination</div>
+    <div class="toggle-group">
+      <button class="tgl active" id="post-dest-tg"   onclick="postSetDest('telegram')">📢 Telegram</button>
+      <button class="tgl"        id="post-dest-tt"   onclick="postSetDest('tiktok')">🎵 TikTok</button>
+      <button class="tgl"        id="post-dest-both" onclick="postSetDest('both')">📢+🎵 Both</button>
+    </div>
+    <div id="post-privacy-section" style="display:none">
+      <div class="card-title">🔒 TikTok Privacy</div>
+      <div class="toggle-group">
+        <button class="tgl" id="post-priv-pub"     onclick="postSetPriv('PUBLIC_TO_EVERYONE')">🌍 Public</button>
+        <button class="tgl" id="post-priv-friends" onclick="postSetPriv('FRIEND_ONLY')">👥 Friends</button>
+        <button class="tgl active" id="post-priv-priv" onclick="postSetPriv('SELF_ONLY')">🔒 Private</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🤖 AI Caption</div>
+    <div class="input-group">
+      <label>Video topic</label>
+      <input type="text" id="post-topic" placeholder="e.g. Forex trading, music video...">
+    </div>
+    <div class="input-group">
+      <label>Language</label>
+      <select id="post-lang">
+        <option value="English">🇬🇧 English</option>
+        <option value="Amharic">🇪🇹 Amharic</option>
+        <option value="Arabic">🇸🇦 Arabic</option>
+        <option value="French">🇫🇷 French</option>
+      </select>
+    </div>
+    <button class="btn btn-secondary" onclick="generatePostAI()" id="post-ai-btn">🤖 Generate Caption</button>
+    <div id="post-ai-result" style="display:none;margin-top:12px">
+      <textarea id="post-caption" style="height:80px;margin-bottom:8px" placeholder="Caption..."></textarea>
+      <input type="text" id="post-hashtags" placeholder="Hashtags...">
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="sendPost()" style="margin-bottom:12px">📤 Confirm Post Settings</button>
+  <div class="bottom-space"></div>
+</div>
+
+<!-- ████████████ AI ████████████ -->
+<div class="page" id="page-ai">
+  <div class="card">
+    <div class="card-title">🤖 Viral Content Generator</div>
+    <div class="input-group">
+      <label>What is the video about?</label>
+      <input type="text" id="ai-topic" placeholder="e.g. Forex tips, Ethiopian music, funny video...">
+    </div>
+    <div class="input-group">
+      <label>Platform</label>
+      <select id="ai-platform">
+        <option value="both">📢 + 🎵 Telegram & TikTok</option>
+        <option value="telegram">📢 Telegram only</option>
+        <option value="tiktok">🎵 TikTok only</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Language</label>
+      <select id="ai-language">
+        <option value="English">🇬🇧 English</option>
+        <option value="Amharic">🇪🇹 Amharic</option>
+        <option value="Arabic">🇸🇦 Arabic</option>
+        <option value="French">🇫🇷 French</option>
+        <option value="Spanish">🇪🇸 Spanish</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="ai-gen-btn" onclick="generateAI()">🤖 Generate Viral Content</button>
+  </div>
+
+  <div id="ai-result-card" style="display:none">
+    <div class="card">
+      <div class="card-title">✨ Generated Content</div>
+      <div class="input-group">
+        <label>📝 Caption</label>
+        <textarea id="ai-cap-out" style="height:130px"></textarea>
+      </div>
+      <div class="input-group">
+        <label>🏷 Hashtags</label>
+        <textarea id="ai-hash-out" style="height:60px"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline btn-sm" onclick="generateAI()">🔄 Regenerate</button>
+        <button class="btn btn-success btn-sm" onclick="copyAIToDownload()">✅ Use in Post</button>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-space"></div>
+</div>
+
+<!-- ████████████ ADMIN ████████████ -->
+<div class="page" id="page-admin">
+  <div id="admin-not-admin" style="display:none">
+    <div class="alert alert-error">🔐 Admin access only. You don't have admin privileges.</div>
+  </div>
+
+  <div id="admin-panel" style="display:none">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value gradient-text" id="adm-approved">-</div>
+        <div class="stat-label">✅ Approved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--yellow)" id="adm-pending">-</div>
+        <div class="stat-label">⏳ Pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--red)" id="adm-banned">-</div>
+        <div class="stat-label">🚫 Banned</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--accent2)">∞</div>
+        <div class="stat-label">📤 Posts</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚡ Admin Actions</div>
+      <div class="btn-row">
+        <button class="btn btn-outline btn-sm" onclick="adminAction('pending')">⏳ Pending Users</button>
+        <button class="btn btn-outline btn-sm" onclick="adminAction('users')">✅ Approved Users</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline btn-sm" onclick="adminAction('banned')">🚫 Banned Users</button>
+        <button class="btn btn-secondary btn-sm" onclick="adminAction('broadcast')">📢 Broadcast</button>
+      </div>
+    </div>
+
+    <!-- Broadcast -->
+    <div class="card" id="broadcast-card" style="display:none">
+      <div class="card-title">📢 Broadcast Message</div>
+      <div class="input-group">
+        <textarea id="broadcast-msg" placeholder="Message to send to all approved users..." style="height:80px"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="sendBroadcast()">📢 Send to All Users</button>
+    </div>
+
+    <!-- Users list -->
+    <div class="card" id="users-list-card" style="display:none">
+      <div class="card-title" id="users-list-title">Users</div>
+      <div id="users-list-content"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔧 Bot Status</div>
+      <div class="row"><span class="row-label">🤖 Telegram Bot</span><span class="badge badge-green">✅ Online</span></div>
+      <div class="row"><span class="row-label">🌐 Web Server</span><span class="badge badge-green">✅ Running</span></div>
+      <div class="row"><span class="row-label">🎵 TikTok API</span><span class="badge badge-yellow">⏳ In Review</span></div>
+      <div class="row"><span class="row-label">🤖 Gemini AI</span><span class="badge badge-green">✅ Ready</span></div>
+    </div>
+  </div>
+  <div class="bottom-space"></div>
+</div>
+
+<!-- ████████████ SETTINGS ████████████ -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">👤 Your Profile</div>
+    <div class="row"><span class="row-label">Name</span><span class="row-value" id="set-name">-</span></div>
+    <div class="row"><span class="row-label">Username</span><span class="row-value" id="set-username">-</span></div>
+    <div class="row"><span class="row-label">User ID</span><span class="row-value" id="set-id">-</span></div>
+    <div class="row"><span class="row-label">Access</span><span class="badge badge-green">✅ Approved</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙️ Default Settings</div>
+    <div class="input-group">
+      <label>Default Watermark</label>
+      <select id="set-wm" onchange="saveSetting('wm',this.value)">
+        <option value="on">✅ With Watermark</option>
+        <option value="off">❌ No Watermark</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Default Destination</label>
+      <select id="set-dest" onchange="saveSetting('dest',this.value)">
+        <option value="telegram">📢 Telegram Channel</option>
+        <option value="tiktok">🎵 TikTok</option>
+        <option value="both">📢 + 🎵 Both</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Default AI Language</label>
+      <select id="set-lang" onchange="saveSetting('lang',this.value)">
+        <option value="English">🇬🇧 English</option>
+        <option value="Amharic">🇪🇹 Amharic</option>
+        <option value="Arabic">🇸🇦 Arabic</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🤖 AI Model Selection</div>
+    <div id="model-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔑 Gemini API Key (optional)</div>
+    <div class="alert alert-info">ℹ️ Add your own key for faster AI generation directly in the app.</div>
+    <div class="input-group">
+      <input type="password" id="set-apikey" placeholder="AIzaSy..." oninput="saveSetting('gemini_key',this.value)">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔗 Quick Links</div>
+    <div class="list-item" onclick="window.open('https://aistudio.google.com','_blank')">
+      <div class="list-icon" style="background:rgba(6,182,212,0.15)">🧠</div>
+      <div class="list-info"><h4>Google AI Studio</h4><p>Get Gemini API key</p></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
+    <div class="list-item" onclick="window.open('https://developers.tiktok.com','_blank')">
+      <div class="list-icon" style="background:rgba(0,0,0,0.3)">🎵</div>
+      <div class="list-info"><h4>TikTok Developer</h4><p>Check app review status</p></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
+    <div class="list-item" onclick="window.open('https://railway.com','_blank')">
+      <div class="list-icon" style="background:rgba(124,58,237,0.15)">🚂</div>
+      <div class="list-info"><h4>Railway</h4><p>Bot deployment & logs</p></div>
+      <span style="color:var(--muted)">›</span>
+    </div>
+  </div>
+  <div class="bottom-space"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+const tg   = window.Telegram?.WebApp;
+const user = tg?.initDataUnsafe?.user;
+const ADMIN_ID = parseInt(localStorage.getItem('dawn_admin_id') || '0');
+
+if (tg) {
+  tg.ready(); tg.expand();
+  tg.setHeaderColor('#0a0a0f');
+  tg.setBackgroundColor('#0a0a0f');
+}
+
+// Settings
+const S = JSON.parse(localStorage.getItem('dawn_s') || '{}');
+function saveSetting(k,v){ S[k]=v; localStorage.setItem('dawn_s',JSON.stringify(S)); showToast('✅ Saved'); }
+
+// ═══════════════════════════════════════
+//  USER SETUP
+// ═══════════════════════════════════════
+function initUser() {
+  const name = user ? (user.first_name + (user.last_name?' '+user.last_name:'')) : 'User';
+  const uname = user?.username ? '@'+user.username : 'No username';
+  const uid   = user?.id || 0;
+
+  document.getElementById('hdr-user').textContent   = name;
+  document.getElementById('home-name').textContent  = name;
+  document.getElementById('home-avatar').textContent= (name[0]||'?').toUpperCase();
+  document.getElementById('home-status').textContent= '✅ Access Approved';
+  document.getElementById('set-name').textContent   = name;
+  document.getElementById('set-username').textContent = uname;
+  document.getElementById('set-id').textContent     = uid;
+
+  // Check if admin
+  const isAdmin = uid === ADMIN_ID || S.is_admin;
+  if (isAdmin) {
+    document.getElementById('admin-panel').style.display = 'block';
+    document.getElementById('adm-approved').textContent  = S.stat_approved || '?';
+    document.getElementById('adm-pending').textContent   = S.stat_pending  || '?';
+    document.getElementById('adm-banned').textContent    = S.stat_banned   || '?';
+  } else {
+    document.getElementById('admin-not-admin').style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════
+function showTab(name) {
+  const tabs = ['home','download','post','ai','admin','settings'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', tabs[i]===name));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(tg) name==='home' ? tg.BackButton.hide() : tg.BackButton.show();
+}
+
+if(tg) tg.BackButton.onClick(()=>showTab('home'));
+
+// ═══════════════════════════════════════
+//  DOWNLOAD PAGE
+// ═══════════════════════════════════════
+let dlWm='on', dlDest='telegram', dlPriv='SELF_ONLY', captionMode='ai';
+
+function dlSetWm(v) {
+  dlWm=v;
+  document.getElementById('dl-wm-on').classList.toggle('active',v==='on');
+  document.getElementById('dl-wm-off').classList.toggle('active',v==='off');
+}
+function dlSetDest(v) {
+  dlDest=v;
+  ['tg','tt','both'].forEach(d=>document.getElementById('dl-dest-'+d).classList.remove('active'));
+  document.getElementById('dl-dest-'+(v==='telegram'?'tg':v==='tiktok'?'tt':'both')).classList.add('active');
+  document.getElementById('dl-privacy-section').style.display=(v!=='telegram')?'block':'none';
+}
+function dlSetPriv(v) {
+  dlPriv=v;
+  ['pub','friends','priv'].forEach(p=>document.getElementById('dl-priv-'+p).classList.remove('active'));
+  document.getElementById('dl-priv-'+(v==='PUBLIC_TO_EVERYONE'?'pub':v==='FRIEND_ONLY'?'friends':'priv')).classList.add('active');
+}
+function setCaptionMode(m) {
+  captionMode=m;
+  ['ai','manual','skip'].forEach(x=>document.getElementById('cap-'+x).classList.toggle('active',x===m));
+  document.getElementById('ai-topic-section').style.display=(m==='ai')?'block':'none';
+  document.getElementById('manual-caption-section').style.display=(m==='manual')?'block':'none';
+}
+
+function sendDownload() {
+  const url = document.getElementById('dl-url').value.trim();
+  if(!url){ showToast('❗ Please enter a video URL'); return; }
+
+  const data = {
+    action:'download',
+    url, wm:dlWm, dest:dlDest, privacy:dlPriv,
+    caption_mode:captionMode,
+    topic: document.getElementById('dl-topic').value.trim(),
+    caption: document.getElementById('dl-caption').value.trim(),
+    hashtags: document.getElementById('dl-hashtags').value.trim(),
+  };
+
+  if(tg){ tg.sendData(JSON.stringify(data)); showToast('✅ Sent to bot!'); }
+  else { navigator.clipboard?.writeText(url); showToast('📋 URL copied — paste in bot!'); }
+}
+
+// ═══════════════════════════════════════
+//  POST PAGE
+// ═══════════════════════════════════════
+let postDest='telegram', postPriv='SELF_ONLY';
+
+function postSetDest(v) {
+  postDest=v;
+  ['tg','tt','both'].forEach(d=>document.getElementById('post-dest-'+d).classList.remove('active'));
+  document.getElementById('post-dest-'+(v==='telegram'?'tg':v==='tiktok'?'tt':'both')).classList.add('active');
+  document.getElementById('post-privacy-section').style.display=(v!=='telegram')?'block':'none';
+}
+function postSetPriv(v) {
+  postPriv=v;
+  ['pub','friends','priv'].forEach(p=>document.getElementById('post-priv-'+p).classList.remove('active'));
+  document.getElementById('post-priv-'+(v==='PUBLIC_TO_EVERYONE'?'pub':v==='FRIEND_ONLY'?'friends':'priv')).classList.add('active');
+}
+
+async function generatePostAI() {
+  const topic = document.getElementById('post-topic').value.trim();
+  const lang  = document.getElementById('post-lang').value;
+  if(!topic){ showToast('❗ Enter video topic first'); return; }
+  const btn = document.getElementById('post-ai-btn');
+  btn.innerHTML='<div class="spinner"></div> Generating...'; btn.disabled=true;
+  try {
+    const r = await callGemini(topic,'both',lang,S.gemini_key||'');
+    document.getElementById('post-caption').value  = r.caption;
+    document.getElementById('post-hashtags').value = r.hashtags;
+    document.getElementById('post-ai-result').style.display='block';
+    showToast('✅ Caption generated!');
+  } catch(e){ showToast('❌ '+e.message.slice(0,40)); }
+  btn.innerHTML='🤖 Generate Caption'; btn.disabled=false;
+}
+
+function sendPost() {
+  const data = {
+    action:'post_file',
+    dest:postDest, privacy:postPriv,
+    caption:document.getElementById('post-caption').value.trim(),
+    hashtags:document.getElementById('post-hashtags').value.trim(),
+  };
+  if(tg){ tg.sendData(JSON.stringify(data)); showToast('✅ Settings sent to bot!'); }
+  else showToast('ℹ️ Open in Telegram to use');
+}
+
+// ═══════════════════════════════════════
+//  AI PAGE
+// ═══════════════════════════════════════
+async function generateAI() {
+  const topic = document.getElementById('ai-topic').value.trim();
+  const plat  = document.getElementById('ai-platform').value;
+  const lang  = document.getElementById('ai-language').value;
+  if(!topic){ showToast('❗ Describe your video first'); return; }
+
+  const btn = document.getElementById('ai-gen-btn');
+  btn.innerHTML='<div class="spinner"></div> Generating...'; btn.disabled=true;
+
+  try {
+    let r;
+    if(S.gemini_key) {
+      r = await callGemini(topic, plat, lang, S.gemini_key);
+    } else {
+      // Ask bot to generate
+      if(tg){
+        tg.sendData(JSON.stringify({action:'generate_ai',topic,platform:plat,language:lang}));
+        showToast('🤖 Requested from bot...');
+        btn.innerHTML='🤖 Generate Viral Content'; btn.disabled=false;
+        return;
+      }
+      throw new Error('Add Gemini API key in Settings for direct generation');
+    }
+    document.getElementById('ai-cap-out').value  = r.caption;
+    document.getElementById('ai-hash-out').value = r.hashtags;
+    document.getElementById('ai-result-card').style.display='block';
+  } catch(e){ showToast('❌ '+e.message.slice(0,50)); }
+
+  btn.innerHTML='🤖 Generate Viral Content'; btn.disabled=false;
+}
+
+function copyAIToDownload() {
+  S.copied_caption  = document.getElementById('ai-cap-out').value;
+  S.copied_hashtags = document.getElementById('ai-hash-out').value;
+  document.getElementById('dl-caption').value  = S.copied_caption;
+  document.getElementById('dl-hashtags').value = S.copied_hashtags;
+  setCaptionMode('manual');
+  showTab('download');
+  showToast('✅ Copied to Download tab!');
+}
+
+// ═══════════════════════════════════════
+//  GEMINI DIRECT CALL
+// ═══════════════════════════════════════
+const AI_MODELS_LIST = [
+  'gemini-2.5-flash','gemini-2.0-flash-001','gemini-1.5-flash-latest','gemini-2.0-flash-lite'
+];
+
+async function callGemini(topic, platform, language, apiKey) {
+  if(!apiKey) throw new Error('No API key — add in Settings');
+  const model = S.model && S.model!=='auto' ? S.model : AI_MODELS_LIST[0];
+  const prompt = `Write viral ${platform} content in ${language} for: ${topic}\n\nReply in EXACTLY this format:\n\nCAPTION:\n[Engaging caption with emojis - max 100 words]\n\nHASHTAGS:\n[15 hashtags: #tag1 #tag2 #tag3]`;
+
+  for(const m of [model,...AI_MODELS_LIST.filter(x=>x!==model)]) {
+    try {
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`,
+        { method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.8,maxOutputTokens:500}})
+        }
+      );
+      const data = await resp.json();
+      if(data.error){ if(data.error.message?.includes('quota')) continue; throw new Error(data.error.message); }
+      const text = data.candidates[0].content.parts[0].text;
+      let caption='', hashtags='';
+      if(text.includes('CAPTION:')&&text.includes('HASHTAGS:')){
+        const parts=text.split('HASHTAGS:');
+        caption=parts[0].replace('CAPTION:','').trim();
+        hashtags=parts[1].trim();
+      } else { caption=text; }
+      return {caption,hashtags};
+    } catch(e){ if(!e.message?.includes('quota')) throw e; }
+  }
+  throw new Error('All models rate limited. Wait 1 min.');
+}
+
+// ═══════════════════════════════════════
+//  ADMIN
+// ═══════════════════════════════════════
+function adminAction(type) {
+  document.getElementById('broadcast-card').style.display='none';
+  document.getElementById('users-list-card').style.display='none';
+
+  if(type==='broadcast'){
+    document.getElementById('broadcast-card').style.display='block';
+    return;
+  }
+  const titles = {pending:'⏳ Pending Users',users:'✅ Approved Users',banned:'🚫 Banned Users'};
+  document.getElementById('users-list-title').textContent = titles[type];
+  document.getElementById('users-list-content').innerHTML =
+    '<p style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Manage users in the bot with /stats command</p>';
+  document.getElementById('users-list-card').style.display='block';
+  if(tg) tg.sendData(JSON.stringify({action:'admin_view',type}));
+}
+
+function sendBroadcast() {
+  const msg = document.getElementById('broadcast-msg').value.trim();
+  if(!msg){ showToast('❗ Enter a message'); return; }
+  if(tg){ tg.sendData(JSON.stringify({action:'broadcast',message:msg})); showToast('📢 Broadcast sent!'); }
+  document.getElementById('broadcast-msg').value='';
+}
+
+// ═══════════════════════════════════════
+//  AI MODEL SELECTOR
+// ═══════════════════════════════════════
+const AI_MODELS = [
+  {key:'auto',              label:'🤖 Auto (tries all)',  desc:'Recommended'},
+  {key:'gemini-2.5-flash',  label:'⚡ Gemini 2.5 Flash', desc:'Newest'},
+  {key:'gemini-2.0-flash-001',label:'🔥 Gemini 2.0 Flash',desc:'Fast & stable'},
+  {key:'gemini-1.5-flash-latest',label:'💨 Gemini 1.5 Flash',desc:'Reliable'},
+  {key:'gemini-2.0-flash-lite',label:'🪶 Gemini Lite',   desc:'Most quota'},
+];
+
+function renderModels(){
+  document.getElementById('model-list').innerHTML = AI_MODELS.map(m=>`
+    <div class="list-item" onclick="selectModel('${m.key}')">
+      <div class="list-info"><h4>${m.label}</h4><p>${m.desc}</p></div>
+      ${(S.model||'auto')===m.key
+        ? '<span class="badge badge-green">✅</span>'
+        : '<span style="color:var(--muted)">›</span>'}
+    </div>`).join('');
+}
+
+function selectModel(k){
+  S.model=k;
+  localStorage.setItem('dawn_s',JSON.stringify(S));
+  renderModels();
+  showToast('✅ Model: '+AI_MODELS.find(m=>m.key===k)?.label);
+  if(tg) tg.sendData(JSON.stringify({action:'set_model',model:k}));
+}
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+let toastT;
+function showToast(msg){
+  clearTimeout(toastT);
+  document.querySelector('.toast')?.remove();
+  const t=document.createElement('div');
+  t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  toastT=setTimeout(()=>t.remove(),2500);
+}
+
+// ═══════════════════════════════════════
+//  LOAD SAVED SETTINGS
+// ═══════════════════════════════════════
+function loadSaved(){
+  if(S.wm)           { document.getElementById('set-wm').value=S.wm; dlSetWm(S.wm); }
+  if(S.dest)         { document.getElementById('set-dest').value=S.dest; }
+  if(S.lang)         { document.getElementById('set-lang').value=S.lang; document.getElementById('ai-language').value=S.lang; }
+  if(S.gemini_key)   { document.getElementById('set-apikey').value=S.gemini_key; }
+}
+
+// ═══════════════════════════════════════
+//  START
+// ═══════════════════════════════════════
+initUser();
+loadSaved();
+renderModels();
+</script>
+</body>
+</html>
